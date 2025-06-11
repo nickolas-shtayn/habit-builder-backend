@@ -2,8 +2,11 @@
   "name": "habit-builder-backend",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/server.js",
+    "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push"
   },
   "repository": {
     "type": "git",
@@ -16,5 +19,16 @@
     "url": "https://github.com/nickolas-shtayn/habit-builder-backend/issues"
   },
   "homepage": "https://github.com/nickolas-shtayn/habit-builder-backend#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.44.2",
+    "express": "^5.1.0",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.1",
+    "nodemon": "^3.1.10"
+  }
 }
