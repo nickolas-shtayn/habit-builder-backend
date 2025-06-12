@@ -12,7 +12,6 @@ const PORT = 3000;
 
 server.use(express.json());
 
-// Create account and send id, email, and onboarding in response
 server.post("/users", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -29,7 +28,6 @@ server.post("/users", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // adds user to db then returns the db data to use for response
     const [newUser] = await db
       .insert(users)
       .values({ email, password: hashedPassword })
