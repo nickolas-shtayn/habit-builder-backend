@@ -21,6 +21,7 @@
   "homepage": "https://github.com/nickolas-shtayn/habit-builder-backend#readme",
   "description": "",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.44.2",
