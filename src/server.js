@@ -10,7 +10,29 @@ import { isValidEmail, isValidPassword } from "./helpers/validation.js";
 const server = express();
 const PORT = 3000;
 
+server.use(cors());
 server.use(express.json());
+
+const extractUserFromToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token =
+    authHeader && authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Expired" });
+    } else {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+  }
+};
 
 server.post("/users", async (req, res) => {
   try {
@@ -36,13 +58,27 @@ server.post("/users", async (req, res) => {
         email: users.email,
         completed_onboarding: users.completed_onboarding,
       });
-    res.status(201).json(newUser);
+
+    const payload = {
+      sub: newUser.id,
+      email: newUser.email,
+    };
+
+    const token = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn: "1h",
+    });
+
+    return res.status(201).json({
+      user: newUser,
+      token,
+      expiresIn: "1h",
+    });
   } catch (error) {
     // postgres duplicate email error
     if (error.cause.code === "23505") {
-      res.status(409).json({ error: "Email already exists" });
+      return res.status(409).json({ error: "Email already exists" });
     } else {
-      res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 });
@@ -76,7 +112,7 @@ server.post("/auth/login", async (req, res) => {
         const token = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
           expiresIn,
         });
-        res.status(200).json({
+        return res.status(200).json({
           token,
           expiresIn,
           user: {
@@ -86,13 +122,31 @@ server.post("/auth/login", async (req, res) => {
           },
         });
       } else {
-        res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({ error: "Invalid credentials" });
       }
     } else {
-      res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+server.patch("/users/onboarding", extractUserFromToken, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    await db
+      .update(users)
+      .set({ completed_onboarding: true })
+      .where(eq(users.id, userId));
+
+    return res.status(200).json({
+      message: "Onboarding completed successfully",
+      completed_onboarding: true,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
