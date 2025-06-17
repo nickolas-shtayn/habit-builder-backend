@@ -34,6 +34,11 @@ const extractUserFromToken = (req, res, next) => {
   }
 };
 
+server.get("/auth/me", extractUserFromToken, async (req, res) => {
+  const { sub, email } = req.user;
+  res.status(200).json({ sub, email });
+});
+
 server.post("/users", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -99,34 +104,35 @@ server.post("/auth/login", async (req, res) => {
 
     const user = await db.select().from(users).where(eq(users.email, email));
 
-    if (user.length > 0) {
-      const hashedPass = user[0].password;
-      const isMatch = await bcrypt.compare(password, hashedPass);
-
-      if (isMatch) {
-        const payload = {
-          sub: user[0].id,
-          email: user[0].email,
-        };
-        const expiresIn = rememberMe ? "30d" : "1h";
-        const token = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
-          expiresIn,
-        });
-        return res.status(200).json({
-          token,
-          expiresIn,
-          user: {
-            id: user[0].id,
-            email: user[0].email,
-            completed_onboarding: user[0].completed_onboarding,
-          },
-        });
-      } else {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
-    } else {
+    if (user.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
+
+    const hashedPass = user[0].password;
+    const isMatch = await bcrypt.compare(password, hashedPass);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const payload = {
+      sub: user[0].id,
+      email: user[0].email,
+    };
+    const expiresIn = rememberMe ? "30d" : "1h";
+    const token = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn,
+    });
+
+    return res.status(200).json({
+      token,
+      expiresIn,
+      user: {
+        id: user[0].id,
+        email: user[0].email,
+        completed_onboarding: user[0].completed_onboarding,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ error: "Internal server error" });
   }
