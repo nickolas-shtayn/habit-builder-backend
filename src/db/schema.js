@@ -6,7 +6,6 @@ import {
   varchar,
   date,
   pgEnum,
-  primaryKey,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -19,14 +18,14 @@ export const users = pgTable("users", {
 export const habits = pgTable("habits", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   habit_name: varchar().notNull(),
-  icon_url: text().notNull(), // unsure if I should keep it notNull() because a user might not want an icon but I doubt it
+  icon_url: text(),
   failReflectionLimit: integer("fail_reflection_limit").notNull(),
   cue: text().notNull(),
   craving: text().notNull(),
   response: text().notNull(),
   reward: text().notNull(),
   build: boolean().default(true),
-  sort_order: integer().notNull().default(1), // should this be an enum?
+  sort_order: integer().notNull().default(1),
   userId: integer("user_id").references(() => users.id),
 });
 
@@ -56,22 +55,15 @@ export const reflections = pgTable("reflections", {
 export const tactics = pgTable("tactics", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   name: varchar().notNull(),
-  icon_url: text().notNull(), // again not sure if this should be notNull() or not
-  description: text().notNull(), // again not sure if this should be notNull() or not
+  icon_url: text(),
+  description: text(),
   partOfHabit: habitStageEnum("part_of_habit").notNull(),
   build: boolean().default(true),
 });
 
 // junction table
-export const reflectionTactics = pgTable(
-  "reflection_tactics",
-  {
-    reflectionId: integer("reflection_id").references(() => reflections.id),
-    tacticId: integer("tactic_id").references(() => tactics.id),
-  },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.reflectionId, table.tacticId] }), // combines the two foreign keys into a primary key that is unique
-    };
-  }
-);
+export const reflectionTactics = pgTable("reflection_tactics", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  reflectionId: integer("reflection_id").references(() => reflections.id),
+  tacticId: integer("tactic_id").references(() => tactics.id),
+});
