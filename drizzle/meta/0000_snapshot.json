@@ -1,5 +1,5 @@
 {
-  "id": "93cfa7d2-a82c-4b41-945c-d11a04067b01",
+  "id": "faa3dd23-cb12-4caf-94d3-814b80d054ec",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -91,7 +91,7 @@
           "name": "icon_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "fail_reflection_limit": {
           "name": "fail_reflection_limit",
@@ -170,6 +170,23 @@
       "name": "reflection_tactics",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "reflection_tactics_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
         "reflection_id": {
           "name": "reflection_id",
           "type": "integer",
@@ -212,15 +229,7 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "reflection_tactics_reflection_id_tactic_id_pk": {
-          "name": "reflection_tactics_reflection_id_tactic_id_pk",
-          "columns": [
-            "reflection_id",
-            "tactic_id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -338,13 +347,13 @@
           "name": "icon_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "description": {
           "name": "description",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "part_of_habit": {
           "name": "part_of_habit",

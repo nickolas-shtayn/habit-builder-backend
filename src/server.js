@@ -39,7 +39,7 @@ server.get("/auth/me", extractUserFromToken, async (req, res) => {
   res.status(200).json({ sub, email });
 });
 
-server.post("/users", async (req, res) => {
+server.post("/signup", async (req, res) => {
   try {
     const { email, password } = req.body;
 

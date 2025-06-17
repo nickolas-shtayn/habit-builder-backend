@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "generate": "drizzle-kit generate",
-    "push": "drizzle-kit push"
+    "push": "drizzle-kit push",
+    "migrate": "drizzle-kit migrate"
   },
   "repository": {
     "type": "git",

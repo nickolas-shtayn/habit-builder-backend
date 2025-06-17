@@ -8,7 +8,7 @@ CREATE TABLE "habit_completions" (
 CREATE TABLE "habits" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "habits_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"habit_name" varchar NOT NULL,
-	"icon_url" text NOT NULL,
+	"icon_url" text,
 	"fail_reflection_limit" integer NOT NULL,
 	"cue" text NOT NULL,
 	"craving" text NOT NULL,
@@ -20,9 +20,9 @@ CREATE TABLE "habits" (
 );
 --> statement-breakpoint
 CREATE TABLE "reflection_tactics" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "reflection_tactics_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"reflection_id" integer,
-	"tactic_id" integer,
-	CONSTRAINT "reflection_tactics_reflection_id_tactic_id_pk" PRIMARY KEY("reflection_id","tactic_id")
+	"tactic_id" integer
 );
 --> statement-breakpoint
 CREATE TABLE "reflections" (
@@ -38,8 +38,8 @@ CREATE TABLE "reflections" (
 CREATE TABLE "tactics" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "tactics_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"name" varchar NOT NULL,
-	"icon_url" text NOT NULL,
-	"description" text NOT NULL,
+	"icon_url" text,
+	"description" text,
 	"part_of_habit" "habit_stage" NOT NULL,
 	"build" boolean DEFAULT true
 );
