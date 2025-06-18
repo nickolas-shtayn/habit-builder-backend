@@ -6,6 +6,7 @@ import {
   varchar,
   date,
   pgEnum,
+  timestamp,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -13,6 +14,16 @@ export const users = pgTable("users", {
   email: varchar().notNull().unique(),
   password: text().notNull(),
   completed_onboarding: boolean().default(false),
+});
+
+export const passwordResets = pgTable("password_resets", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  resetCode: integer("reset_code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
 });
 
 export const habits = pgTable("habits", {

@@ -19,6 +19,14 @@ CREATE TABLE "habits" (
 	"user_id" integer
 );
 --> statement-breakpoint
+CREATE TABLE "password_resets" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "password_resets_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"user_id" integer NOT NULL,
+	"reset_code" integer NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"used" boolean DEFAULT false
+);
+--> statement-breakpoint
 CREATE TABLE "reflection_tactics" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "reflection_tactics_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"reflection_id" integer,
@@ -54,6 +62,7 @@ CREATE TABLE "users" (
 --> statement-breakpoint
 ALTER TABLE "habit_completions" ADD CONSTRAINT "habit_completions_habit_id_habits_id_fk" FOREIGN KEY ("habit_id") REFERENCES "public"."habits"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "habits" ADD CONSTRAINT "habits_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "password_resets" ADD CONSTRAINT "password_resets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reflection_tactics" ADD CONSTRAINT "reflection_tactics_reflection_id_reflections_id_fk" FOREIGN KEY ("reflection_id") REFERENCES "public"."reflections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reflection_tactics" ADD CONSTRAINT "reflection_tactics_tactic_id_tactics_id_fk" FOREIGN KEY ("tactic_id") REFERENCES "public"."tactics"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reflections" ADD CONSTRAINT "reflections_habit_id_habits_id_fk" FOREIGN KEY ("habit_id") REFERENCES "public"."habits"("id") ON DELETE no action ON UPDATE no action;

@@ -2,10 +2,13 @@ import express from "express";
 import cors from "cors";
 import { db } from "./db/index.js";
 import bcrypt from "bcrypt";
-import { users } from "./db/schema.js";
-import { eq } from "drizzle-orm";
+import crypto from "crypto";
+import { users, passwordResets } from "./db/schema.js";
+import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
-import { isValidEmail, isValidPassword } from "./helpers/validation.js";
+import { isValidEmail, isValidPassword } from "./utils/validation.js";
+import { sendResetEmail } from "./utils/emailService.js";
+import rateLimit from "express-rate-limit";
 
 const server = express();
 const PORT = 3000;
@@ -34,12 +37,25 @@ const extractUserFromToken = (req, res, next) => {
   }
 };
 
+const ipLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { error: "Too many requests from this IP" },
+});
+
+const emailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3,
+  keyGenerator: (req) => req.body.email,
+  message: { error: "Too many reset requests from this email" },
+});
+
 server.get("/auth/me", extractUserFromToken, async (req, res) => {
   const { sub, email } = req.user;
   res.status(200).json({ sub, email });
 });
 
-server.post("/signup", async (req, res) => {
+server.post("/auth/register", async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -153,6 +169,140 @@ server.patch("/users/onboarding", extractUserFromToken, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+server.post(
+  "/auth/reset-password",
+  ipLimiter,
+  emailLimiter,
+  async (req, res) => {
+    const { email } = req.body;
+
+    const user = await db.select().from(users).where(eq(users.email, email));
+
+    if (user.length === 0) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const resetCode = crypto.randomInt(1000, 10000);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // expires in 10 min from now
+
+    try {
+      // delete previous code the user had
+      await db
+        .delete(passwordResets)
+        .where(eq(passwordResets.userId, user[0].id));
+
+      await db.insert(passwordResets).values({
+        userId: user[0].id,
+        resetCode,
+        expiresAt,
+        used: false,
+      });
+
+      await sendResetEmail(email, resetCode);
+
+      return res.status(200).json({
+        email,
+        expiresAt,
+        message: `reset code has been sent`,
+      });
+    } catch (error) {
+      console.error("Email sending failed:", error);
+      return res.status(500).json({ error: "Failed to send reset code" });
+    }
+  }
+);
+
+server.post("/auth/reset-password/verify", async (req, res) => {
+  const { email, resetCode } = req.body;
+
+  try {
+    const user = await db.select().from(users).where(eq(users.email, email));
+
+    if (user.length === 0) {
+      return res.status(400).json({ error: "Invalid email" });
+    }
+
+    const resetRequest = await db
+      .select()
+      .from(passwordResets)
+      .where(
+        and(
+          eq(passwordResets.userId, user[0].id),
+          eq(passwordResets.resetCode, resetCode)
+        )
+      );
+
+    if (resetRequest.length === 0) {
+      return res.status(400).json({ error: "Invalid reset code" });
+    }
+
+    if (new Date() > new Date(resetRequest[0].expiresAt)) {
+      return res.status(400).json({ error: "Reset code has expired" });
+    }
+
+    if (resetRequest[0].used) {
+      return res.status(400).json({ error: "Reset code has been used" });
+    }
+  } catch (error) {
+    console.error("Database error:", error);
+    return res.status(500).json({ error: "Failed to verify reset code" });
+  }
+});
+
+server.post("/auth/reset-password/complete", async (req, res) => {
+  const { email, password, resetCode } = req.body;
+
+  try {
+    const user = await db.select().from(users).where(eq(users.email, email));
+
+    if (user.length === 0) {
+      return res.status(400).json({ error: "Invalid email" });
+    }
+
+    const resetRequest = await db
+      .select()
+      .from(passwordResets)
+      .where(
+        and(
+          eq(passwordResets.userId, user[0].id),
+          eq(passwordResets.resetCode, resetCode)
+        )
+      );
+
+    if (resetRequest.length === 0) {
+      return res.status(400).json({ error: "Invalid reset code" });
+    }
+
+    if (new Date() > new Date(resetRequest[0].expiresAt)) {
+      return res.status(400).json({ error: "Reset code has expired" });
+    }
+
+    if (resetRequest[0].used) {
+      return res.status(400).json({ error: "Reset code has been used" });
+    }
+
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ error: "Invalid password format" });
+    }
+
+    await db
+      .update(users)
+      .set({ password: await bcrypt.hash(password, 12) })
+      .where(eq(users.email, email));
+
+    await db
+      .update(passwordResets)
+      .set({ used: true })
+      .where(eq(passwordResets.id, resetRequest[0].id));
+
+    return res
+      .status(200)
+      .json({ message: "Password updated successfully", email });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to update password" });
   }
 });
 
