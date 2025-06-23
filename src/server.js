@@ -174,8 +174,8 @@ server.patch("/users/onboarding", extractUserFromToken, async (req, res) => {
 
 server.post(
   "/auth/reset-password",
-  ipLimiter,
-  emailLimiter,
+  // ipLimiter,
+  // emailLimiter,
   async (req, res) => {
     const { email } = req.body;
 
@@ -246,6 +246,10 @@ server.post("/auth/reset-password/verify", async (req, res) => {
     if (resetRequest[0].used) {
       return res.status(400).json({ error: "Reset code has been used" });
     }
+
+    return res
+      .status(200)
+      .json({ resetCode, message: "verification code matched!" });
   } catch (error) {
     console.error("Database error:", error);
     return res.status(500).json({ error: "Failed to verify reset code" });
