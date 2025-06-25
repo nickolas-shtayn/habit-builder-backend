@@ -3,7 +3,7 @@ import cors from "cors";
 import { db } from "./db/index.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-import { users, passwordResets } from "./db/schema.js";
+import { users, passwordResets, habits } from "./db/schema.js";
 import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { isValidEmail, isValidPassword } from "./utils/validation.js";
@@ -174,8 +174,8 @@ server.patch("/users/onboarding", extractUserFromToken, async (req, res) => {
 
 server.post(
   "/auth/reset-password",
-  // ipLimiter,
-  // emailLimiter,
+  ipLimiter,
+  emailLimiter,
   async (req, res) => {
     const { email } = req.body;
 
@@ -307,6 +307,59 @@ server.post("/auth/reset-password/complete", async (req, res) => {
       .json({ message: "Password updated successfully", email });
   } catch (error) {
     return res.status(500).json({ error: "Failed to update password" });
+  }
+});
+
+server.post("/habits/create", extractUserFromToken, async (req, res) => {
+  const userId = req.user.sub;
+  const { name, iconUrl, failReflectionLimit, cue, craving, response, reward } =
+    req.body;
+
+  try {
+    const existingHabits = await db
+      .select()
+      .from(habits)
+      .where(eq(habits.userId, userId));
+    const nextSortOrder = existingHabits.length + 1; // make sure the order starts at 1
+
+    if (nextSortOrder > 6) {
+      return res
+        .status(400)
+        .json({ error: "You've reached the maximum number of habits (6)" });
+    }
+
+    await db.insert(habits).values({
+      habit_name: name,
+      icon_url: iconUrl,
+      failReflectionLimit,
+      cue,
+      craving,
+      response,
+      reward,
+      build: true,
+      sort_order: nextSortOrder,
+      userId,
+    });
+    return res.status(200).json({ message: `${name} has been created` });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to create habit" });
+  }
+});
+
+server.get("/dashboard", extractUserFromToken, async (req, res) => {
+  const userId = req.user.sub;
+  try {
+    const userHabits = await db
+      .select()
+      .from(habits)
+      .where(eq(habits.userId, userId))
+      .orderBy(habits.sort_order);
+
+    return res.status(200).json(userHabits);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to fetch habits" });
   }
 });
 
