@@ -4,7 +4,6 @@ import {
   pgTable,
   text,
   varchar,
-  date,
   pgEnum,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -42,7 +41,7 @@ export const habits = pgTable("habits", {
 
 export const habitCompletions = pgTable("habit_completions", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  date: date().notNull(),
+  date: timestamp().notNull(),
   habitId: integer("habit_id").references(() => habits.id),
 });
 
@@ -59,7 +58,7 @@ export const reflections = pgTable("reflections", {
   reflection: text().notNull(),
   bottleneck: habitStageEnum("bottleneck").notNull(),
   experiment: text().notNull(),
-  date: date().notNull(),
+  date: timestamp().notNull(),
   habitId: integer("habit_id").references(() => habits.id),
 });
 
