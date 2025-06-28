@@ -68,11 +68,21 @@ server.post("/habits/create", extractUserFromToken, async (req, res) => {
   }
 });
 
-server.post("/habits/:id/complete", async (req, res) => {
+server.post("/habits/:id/complete", extractUserFromToken, async (req, res) => {
   const habitId = req.params.id;
   const date = new Date();
+  const userId = req.user.sub;
 
   try {
+    const userHabits = await db
+      .select()
+      .from(habits)
+      .where(and(eq(habits.id, habitId), eq(habits.userId, userId)));
+
+    if (userHabits.length === 0) {
+      return res.status(401).json({ error: "No habit found" });
+    }
+
     await db.insert(habitCompletions).values({
       habitId,
       date,
@@ -89,49 +99,65 @@ server.post("/habits/:id/complete", async (req, res) => {
   }
 });
 
-server.delete("/habits/:id/complete", async (req, res) => {
-  const habitId = req.params.id;
+server.delete(
+  "/habits/:id/complete",
+  extractUserFromToken,
+  async (req, res) => {
+    const habitId = req.params.id;
+    const userId = req.user.sub;
 
-  try {
-    const [completion] = await db
-      .select()
-      .from(habitCompletions)
-      .where(eq(habitCompletions.habitId, habitId));
+    try {
+      const userHabits = await db
+        .select()
+        .from(habits)
+        .where(and(eq(habits.id, habitId), eq(habits.userId, userId)));
 
-    if (!completion) {
+      if (userHabits.length === 0) {
+        return res.status(401).json({ error: "No habit found" });
+      }
+
+      const [completion] = await db
+        .select()
+        .from(habitCompletions)
+        .where(eq(habitCompletions.habitId, habitId));
+
+      if (!completion) {
+        return res
+          .status(404)
+          .json({ error: "No completion found for this habit" });
+      }
+
+      const today = new Date();
+      const completionDate = new Date(completion.date);
+
+      // Convert both dates to local timezone strings for comparison
+      const todayStr = today.toLocaleDateString("en-US", {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+      const completionStr = completionDate.toLocaleDateString("en-US", {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+
+      if (todayStr !== completionStr) {
+        return res
+          .status(400)
+          .json({ error: "Habit has not been completed today" });
+      }
+
+      await db
+        .delete(habitCompletions)
+        .where(eq(habitCompletions.habitId, habitId));
       return res
-        .status(404)
-        .json({ error: "No completion found for this habit" });
-    }
-
-    const today = new Date();
-    const completionDate = new Date(completion.date);
-
-    // Convert both dates to local timezone strings for comparison
-    const todayStr = today.toLocaleDateString("en-US", {
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    });
-    const completionStr = completionDate.toLocaleDateString("en-US", {
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    });
-
-    if (todayStr !== completionStr) {
+        .status(200)
+        .json({ message: "Habit completion deleted successfully" });
+    } catch (error) {
+      console.error(error);
       return res
-        .status(400)
-        .json({ error: "Habit has not been completed today" });
+        .status(500)
+        .json({ error: "Failed to delete habit completion" });
     }
-
-    await db
-      .delete(habitCompletions)
-      .where(eq(habitCompletions.habitId, habitId));
-    return res
-      .status(200)
-      .json({ message: "Habit completion deleted successfully" });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Failed to delete habit completion" });
   }
-});
+);
 
 server.get("/dashboard", extractUserFromToken, async (req, res) => {
   const userId = req.user.sub;
