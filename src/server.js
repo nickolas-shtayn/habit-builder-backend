@@ -1,5 +1,5 @@
 import cors from "cors";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and, desc } from "drizzle-orm";
 import express from "express";
 import authRouter from "./authRouter.js";
 import { db } from "./db/index.js";
@@ -80,7 +80,7 @@ server.post("/habits/:id/complete", extractUserFromToken, async (req, res) => {
       .where(and(eq(habits.id, habitId), eq(habits.userId, userId)));
 
     if (userHabits.length === 0) {
-      return res.status(401).json({ error: "No habit found" });
+      return res.status(404).json({ error: "No habit found" });
     }
 
     await db.insert(habitCompletions).values({
@@ -116,37 +116,32 @@ server.delete(
         return res.status(401).json({ error: "No habit found" });
       }
 
-      const [completion] = await db
+      const lastCompletion = await db
         .select()
         .from(habitCompletions)
-        .where(eq(habitCompletions.habitId, habitId));
+        .where(eq(habitCompletions.habitId, habitId))
+        .orderBy(desc(habitCompletions.date))
+        .limit(1);
 
-      if (!completion) {
+      if (lastCompletion.length === 0) {
         return res
           .status(404)
           .json({ error: "No completion found for this habit" });
       }
 
-      const today = new Date();
-      const completionDate = new Date(completion.date);
+      const lastCompletedDate = lastCompletion[0].date.toLocaleDateString();
+      const today = new Date().toLocaleDateString();
 
-      // Convert both dates to local timezone strings for comparison
-      const todayStr = today.toLocaleDateString("en-US", {
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
-      const completionStr = completionDate.toLocaleDateString("en-US", {
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
-
-      if (todayStr !== completionStr) {
+      if (today !== lastCompletedDate) {
         return res
           .status(400)
-          .json({ error: "Habit has not been completed today" });
+          .json({ error: "No completion was found for this habit today" });
       }
 
       await db
         .delete(habitCompletions)
-        .where(eq(habitCompletions.habitId, habitId));
+        .where(eq(habitCompletions.id, lastCompletion[0].id));
+
       return res
         .status(200)
         .json({ message: "Habit completion deleted successfully" });
