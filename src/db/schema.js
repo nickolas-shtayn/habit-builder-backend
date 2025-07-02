@@ -37,6 +37,7 @@ export const habits = pgTable("habits", {
   build: boolean().default(true),
   sort_order: integer().notNull().default(1),
   userId: integer("user_id").references(() => users.id),
+  date_created: timestamp().notNull(),
 });
 
 export const habitCompletions = pgTable("habit_completions", {

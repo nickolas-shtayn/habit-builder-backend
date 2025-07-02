@@ -16,7 +16,8 @@ CREATE TABLE "habits" (
 	"reward" text NOT NULL,
 	"build" boolean DEFAULT true,
 	"sort_order" integer DEFAULT 1 NOT NULL,
-	"user_id" integer
+	"user_id" integer,
+	"date_created" timestamp NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "password_resets" (

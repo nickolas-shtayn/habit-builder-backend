@@ -7,7 +7,8 @@
     "dev": "nodemon src/server.js",
     "generate": "drizzle-kit generate",
     "push": "drizzle-kit push",
-    "migrate": "drizzle-kit migrate"
+    "migrate": "drizzle-kit migrate",
+    "drop-enums": "source .env && psql $DATABASE_URL -c \"DROP TYPE IF EXISTS \\\"public\\\".\\\"habit_stage\\\" CASCADE;\""
   },
   "repository": {
     "type": "git",
